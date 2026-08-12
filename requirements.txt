@@ -1,0 +1,6 @@
+openai
+feedparser
+requests
+newspaper3k
+pytz
+lxml_html_clean
