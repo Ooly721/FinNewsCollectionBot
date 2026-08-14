@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📊 财经新闻 Dashboard</title>
+    <!-- ECharts CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            padding: 24px;
+            color: #1a1a2e;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        .stat-card .label {
+            font-size: 14px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .stat-card.accent .number { color: #4f6ef7; }
+        .stat-card.green .number { color: #22b573; }
+        .stat-card.orange .number { color: #f5a623; }
+        /* 图表行 */
+        .chart-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .chart-box {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .chart-box h3 {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        .chart-container {
+            width: 100%;
+            height: 300px;
+        }
+        /* 搜索栏 */
+        .search-section {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .search-section input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 16px;
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-section input:focus {
+            border-color: #4f6ef7;
+        }
+        .search-section button {
+            padding: 10px 28px;
+            background: #4f6ef7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .search-section button:hover {
+            background: #3a56d4;
+        }
+        .search-section .clear-btn {
+            background: #e8eaed;
+            color: #555;
+        }
+        .search-section .clear-btn:hover {
+            background: #d5d7db;
+        }
+        /* 文章列表 */
+        .news-list {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .news-list h3 {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        .news-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .news-item:last-child {
+            border-bottom: none;
+        }
+        .news-item .tag {
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+            background: #4f6ef7;
+            padding: 2px 12px;
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .news-item .tag.orange { background: #f5a623; }
+        .news-item .tag.green { background: #22b573; }
+        .news-item .tag.purple { background: #8b5cf6; }
+        .news-item .tag.red { background: #ef4444; }
+        .news-item .date {
+            font-size: 12px;
+            color: #999;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .news-item a {
+            color: #1a1a2e;
+            text-decoration: none;
+            font-size: 14px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .news-item a:hover {
+            color: #4f6ef7;
+            text-decoration: underline;
+        }
+        .empty-state {
+            color: #999;
+            padding: 30px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            body { padding: 12px; }
+            .search-section { flex-direction: column; }
+            .search-section input { width: 100%; }
+        }
+        /* 加载动画 */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📊 财经新闻情报看板</h1>
+    <div class="subtitle" id="updateTime">加载中...</div>
+
+    <!-- 统计卡片 -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card accent"><div class="number" id="totalDays">-</div><div class="label">📅 累计天数</div></div>
+        <div class="stat-card green"><div class="number" id="totalArticles">-</div><div class="label">📰 总文章数</div></div>
+        <div class="stat-card orange"><div class="number" id="todayCount">-</div><div class="label">📌 今日更新</div></div>
+        <div class="stat-card"><div class="number" id="categoryCount">-</div><div class="label">🏷️ 覆盖板块</div></div>
+    </div>
+
+    <!-- 图表行 -->
+    <div class="chart-row">
+        <div class="chart-box">
+            <h3>📈 各板块热度趋势（近7天）</h3>
+            <div class="chart-container" id="trendChart"></div>
+        </div>
+        <div class="chart-box">
+            <h3>🧩 板块占比（全部历史）</h3>
+            <div class="chart-container" id="pieChart"></div>
+        </div>
+    </div>
+
+    <!-- 搜索栏 -->
+    <div class="search-section">
+        <input type="text" id="searchInput" placeholder="🔍 搜索关键词，如：存储、芯片、油价..." />
+        <button id="searchBtn">搜索</button>
+        <button class="clear-btn" id="clearBtn">清空</button>
+        <span style="font-size:13px;color:#999;" id="searchResultCount"></span>
+    </div>
+
+    <!-- 文章列表 -->
+    <div class="news-list" id="newsList">
+        <h3>📰 最新文章</h3>
+        <div id="newsItems"><div class="empty-state">加载中...</div></div>
+    </div>
+</div>
+
+<script>
+    // ==================== 全局变量 ====================
+    let trendChart = null;
+    let pieChart = null;
+    let currentSearchKeyword = '';
+
+    // ==================== 工具函数 ====================
+    function getTagClass(category) {
+        const map = {
+            '存储芯片': 'orange',
+            '半导体': 'orange',
+            'PCB': 'green',
+            'CPO': 'green',
+            '交换机': 'green',
+            'MLCC': 'purple',
+            '马斯克': 'purple',
+            '油价': 'red',
+            '能源': 'red',
+            '地缘': 'red'
+        };
+        for (const [key, cls] of Object.entries(map)) {
+            if (category && category.includes(key)) return cls;
+        }
+        return '';
+    }
+
+    function formatDate(dateStr) {
+        const d = new Date(dateStr);
+        return `${d.getMonth()+1}/${d.getDate()}`;
+    }
+
+    // ==================== 渲染统计卡片 ====================
+    async function loadOverview() {
+        try {
+            const res = await fetch('/api/overview');
+            const data = await res.json();
+            document.getElementById('totalDays').textContent = data.total_days || 0;
+            document.getElementById('totalArticles').textContent = data.total_articles || 0;
+            document.getElementById('todayCount').textContent = data.today_count || 0;
+            document.getElementById('categoryCount').textContent = data.category_stats?.length || 0;
+            
+            // 更新分类卡片颜色（示例）
+            document.getElementById('updateTime').textContent = `🕐 最后更新：${new Date().toLocaleString('zh-CN')}`;
+        } catch (e) {
+            console.error('加载概览失败:', e);
+        }
+    }
+
+    // ==================== 渲染趋势图 ====================
+    async function loadTrend(days = 7) {
+        try {
+            const res = await fetch(`/api/trend?days=${days}`);
+            const data = await res.json();
+            
+            if (!trendChart) {
+                trendChart = echarts.init(document.getElementById('trendChart'));
+            }
+            
+            const option = {
+                tooltip: { trigger: 'axis' },
+                legend: {
+                    type: 'scroll',
+                    textStyle: { fontSize: 11 },
+                    itemWidth: 14,
+                    itemHeight: 10
+                },
+                grid: { left: 40, right: 16, top: 40, bottom: 24 },
+                xAxis: {
+                    type: 'category',
+                    data: data.dates || [],
+                    axisLabel: { fontSize: 11 }
+                },
+                yAxis: {
+                    type: 'value',
+                    minInterval: 1,
+                    splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } }
+                },
+                series: data.series || []
+            };
+            
+            trendChart.setOption(option, true);
+            window.addEventListener('resize', () => trendChart?.resize());
+        } catch (e) {
+            console.error('加载趋势图失败:', e);
+        }
+    }
+
+    // ==================== 渲染饼图 ====================
+    async function loadPie() {
+        try {
+            const res = await fetch('/api/overview');
+            const data = await res.json();
+            
+            if (!pieChart) {
+                pieChart = echarts.init(document.getElementById('pieChart'));
+            }
+            
+            const pieData = (data.category_stats || []).map(item => ({
+                name: item.source_category || '未分类',
+                value: item.count
+            }));
+            
+            const option = {
+                tooltip: { trigger: 'item', formatter: '{b}: {c}篇 ({d}%)' },
+                legend: {
+                    orient: 'vertical',
+                    right: 10,
+                    top: 'center',
+                    textStyle: { fontSize: 11 },
+                    itemWidth: 12,
+                    itemHeight: 10
+                },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: true,
+                    itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+                    label: { show: false },
+                    emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+                    data: pieData.length ? pieData : [{ name: '暂无数据', value: 1 }]
+                }]
+            };
+            
+            pieChart.setOption(option, true);
+            window.addEventListener('resize', () => pieChart?.resize());
+        } catch (e) {
+            console.error('加载饼图失败:', e);
+        }
+    }
+
+    // ==================== 渲染文章列表 ====================
+    async function loadRecent(limit = 20) {
+        try {
+            const res = await fetch(`/api/recent?limit=${limit}`);
+            const articles = await res.json();
+            renderArticles(articles, '📰 最新文章');
+        } catch (e) {
+            console.error('加载文章列表失败:', e);
+        }
+    }
+
+    function renderArticles(articles, title) {
+        const container = document.getElementById('newsItems');
+        if (!articles || articles.length === 0) {
+            container.innerHTML = '<div class="empty-state">😴 暂无匹配的文章</div>';
+            return;
+        }
+        
+        let html = '';
+        for (const item of articles) {
+            const tagClass = getTagClass(item.source_category);
+            const dateStr = item.news_date ? formatDate(item.news_date) : '';
+            html += `
+                <div class="news-item">
+                    <span class="tag ${tagClass}">${item.source_category || '其他'}</span>
+                    <span class="date">${dateStr}</span>
+                    <a href="${item.url || '#'}" target="_blank">${item.title || '无标题'}</a>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+    }
+
+    // ==================== 搜索功能 ====================
+    async function doSearch(keyword) {
+        keyword = keyword.trim();
+        currentSearchKeyword = keyword;
+        
+        if (!keyword) {
+            loadRecent(20);
+            document.getElementById('searchResultCount').textContent = '';
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/api/search?q=${encodeURIComponent(keyword)}`);
+            const articles = await res.json();
+            document.getElementById('searchResultCount').textContent = `找到 ${articles.length} 条结果`;
+            renderArticles(articles, `🔍 搜索结果：“${keyword}”`);
+        } catch (e) {
+            console.error('搜索失败:', e);
+        }
+    }
+
+    // ==================== 初始化 ====================
+    document.addEventListener('DOMContentLoaded', function() {
+        // 加载所有数据
+        loadOverview();
+        loadTrend(7);
+        loadPie();
+        loadRecent(20);
+        
+        // 搜索按钮
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            const input = document.getElementById('searchInput');
+            doSearch(input.value);
+        });
+        
+        // 回车搜索
+        document.getElementById('searchInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                doSearch(this.value);
+            }
+        });
+        
+        // 清空按钮
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResultCount').textContent = '';
+            loadRecent(20);
+        });
+    });
+</script>
+</body>
+</html>
