@@ -32,7 +32,15 @@ jobs:
           SERVER_CHAN_KEYS: ${{ secrets.SERVER_CHAN_KEYS }}
         run: python financebot.py
       
-      - name: 上传数据库文件
+      - name: 提交数据库到仓库
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add news_history.db
+          git diff --staged --quiet || git commit -m "自动更新数据库 $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
+      
+      - name: 上传数据库文件（备份用）
         uses: actions/upload-artifact@v4
         with:
           name: news_history
